@@ -33,6 +33,10 @@ func (f *Fan) GetFanRPM() error {
 // inspur
 type inspurFan struct{ Fan }
 
+func init() {
+	addFan(37945, 43707, "inspur", "unknown", &inspurFan{})
+}
+
 func (f *inspurFan) GetFanSpeed() error {
 	for _, id := range f.getFanIDs() {
 		info, err := f.getFanSpeed(id)
@@ -75,6 +79,10 @@ func (f *inspurFan) getFanCtrlMode() (string, error) {
 
 // intel fan
 type intelFan struct{ Fan }
+
+func init() {
+	addFan(343, 111, "Intel", "unknown", &intelFan{})
+}
 
 func (f *intelFan) GetFanSpeed() error {
 	return fmt.Errorf("intel bmc not support")

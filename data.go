@@ -39,7 +39,4 @@ func getFan(mid, pid int) faner {
 
 func init() {
 	data = make(map[int]Manufactory)
-
-	addFan(37945, 43707, "inspur", "unknown", &inspurFan{})
-	addFan(343, 111, "Intel", "unknown", &intelFan{})
 }
