@@ -14,6 +14,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "goipmi"
+	app.Version = "0.1"
 	app.Usage = "Control the IPMI setting"
 
 	app.Flags = []cli.Flag{
