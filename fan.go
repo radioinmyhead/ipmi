@@ -10,6 +10,7 @@ type faner interface {
 	GetFanSpeed() error
 	SetFanSpeed(int) error
 	CheckSpeed(int) error
+	GetFanRPM() error
 }
 
 type Fan struct{}
@@ -18,6 +19,14 @@ func (f *Fan) CheckSpeed(speedPercent int) error {
 	if speedPercent < 20 || speedPercent > 100 {
 		return fmt.Errorf("speed must between 20~100")
 	}
+	return nil
+}
+func (f *Fan) GetFanRPM() error {
+	info, err := ipmitool("sdr type Fan")
+	if err != nil {
+		return err
+	}
+	logrus.Info(info)
 	return nil
 }
 
