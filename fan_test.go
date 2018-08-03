@@ -33,6 +33,6 @@ func TestVpdParse(t *testing.T) {
 	assert.NotNil(fan)
 	logrus.Info(fan)
 
-	data := &loopFan{&inspurFan{}}
+	data := &inspurFan{}
 	fmt.Printf("%+v\n", data)
 }
