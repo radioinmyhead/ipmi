@@ -13,13 +13,14 @@ func ipmitool(cmd string) (string, error) {
 }
 
 type IPMI struct {
-	faner
+	FanContraller
 }
 
 func GetLocalIPMI() (ret *IPMI, err error) {
 	ret = &IPMI{}
 	str, err := shell.Out("dmidecode  -t 38")
 	if err != nil {
+		err = fmt.Errorf("%v\n%s", str, err)
 		return
 	}
 	if !strings.Contains(str, "KCS") {
@@ -36,9 +37,9 @@ func GetLocalIPMI() (ret *IPMI, err error) {
 	}
 	fan := getFan(mid, pid)
 	if fan == nil {
-		err = fmt.Errorf("not support! info=%s", str)
+		err = fmt.Errorf("not support! info=%s mid=%v pid=%v", str, mid, pid)
 	}
-	ret.faner = fan
+	ret.FanContraller = fan
 	return
 }
 
