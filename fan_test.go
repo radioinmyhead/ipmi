@@ -1,7 +1,6 @@
 package ipmi
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/Sirupsen/logrus"
@@ -13,15 +12,11 @@ func TestVpdParse(t *testing.T) {
 
 	var fan FanContraller
 
-	fan = NewSugonFan()
+	fan = NewIntelFan()
 	assert.NotNil(fan)
 	logrus.Info(fan)
 
 	fan = NewLenovoFan()
-	assert.NotNil(fan)
-	logrus.Info(fan)
-
-	fan = NewIntelFan()
 	assert.NotNil(fan)
 	logrus.Info(fan)
 
@@ -33,6 +28,7 @@ func TestVpdParse(t *testing.T) {
 	assert.NotNil(fan)
 	logrus.Info(fan)
 
-	data := &inspurFan{}
-	fmt.Printf("%+v\n", data)
+	fan = NewSugonFan()
+	assert.NotNil(fan)
+	logrus.Info(fan)
 }
