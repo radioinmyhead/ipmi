@@ -98,6 +98,9 @@ func (f *fan) SetFanSpeed(speedPercent int) error {
 // intel fan
 type intelFan struct{ basefan }
 
+func init() {
+	RegisterFan(343, 111, "Intel Corporation", "S2600WT2R", NewIntelFan())
+}
 func NewIntelFan() FanContraller                 { return &fan{&fanwrap{&intelFan{}}} }
 func (f *intelFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("intel bmc not support") }
 func (f *intelFan) setFanSpeedPre() (string, error) {
@@ -115,6 +118,9 @@ func (f *intelFan) setFanSpeedOne(fanID string, speedPercent int) (string, error
 // lenovo
 type lenovoFan struct{ basefan }
 
+func init() {
+	RegisterFan(19046, 1087, "Lenovo", "ThinkSystem SR650 -[7X06CTO1WW]-", NewLenovoFan())
+}
 func NewLenovoFan() FanContraller                 { return &fan{&lenovoFan{}} }
 func (f *lenovoFan) getFanSpeedMin() int          { return 30 }
 func (f *lenovoFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("lenovo bmc not support") }
@@ -150,6 +156,9 @@ func (f *inspurFan) setFanSpeedPre() (string, error) {
 // inspur fan 2
 type inspurFan2 struct{ basefan }
 
+func init() {
+	RegisterFan(37945, 514, "Inspur", "SA5212M5", NewInspurFan2())
+}
 func NewInspurFan2() FanContraller { return &fan{&inspurFan2{}} }
 func (f *inspurFan2) setFanSpeedPre() (string, error) {
 	return f.setFanCtrlMode()
