@@ -31,4 +31,6 @@ func TestVpdParse(t *testing.T) {
 	fan = NewSugonFan()
 	assert.NotNil(fan)
 	logrus.Info(fan)
+
+	logrus.Info(data)
 }
