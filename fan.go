@@ -6,7 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-type basefanSetter interface {
+type BasefanSetter interface {
 	// get fan speed in %
 	GetFanSpeed() (string, error)
 
@@ -15,20 +15,20 @@ type basefanSetter interface {
 	setFanSpeedPost() error
 }
 
-type fanSetter interface {
-	basefanSetter
+type FanSetter interface {
+	BasefanSetter
 	setFanSpeedPercent(int) (string, error)
 }
 
 type loopfanSetter interface {
-	basefanSetter
+	BasefanSetter
 	getFanIDs() []string
 	setFanSpeedOne(string, int) (string, error)
 	getFanSpeedOne(string) (string, error)
 }
 
 type FanContraller interface {
-	fanSetter
+	FanSetter
 	// get fan speed in RPM
 	GetFanRPM() (string, error)
 	// set fan speed in %
@@ -71,7 +71,7 @@ func (f *loopFan) getFanSpeedPercent() (string, error) {
 	return ret, nil
 }
 
-type fanContraller struct{ fanSetter }
+type fanContraller struct{ FanSetter }
 
 func (f *fanContraller) GetFanRPM() (string, error) {
 	return ipmitool("sdr type Fan")
@@ -106,7 +106,7 @@ func (f *fanContraller) SetFanSpeed(speedPercent int) error {
 // intel fan
 type intelFan struct{ fan }
 
-func NewIntelFan() FanContraller                 { return &fanContraller{fanSetter: &loopFan{&intelFan{}}} }
+func NewIntelFan() FanContraller                 { return &fanContraller{FanSetter: &loopFan{&intelFan{}}} }
 func (f *intelFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("intel bmc not support") }
 func (f *intelFan) setFanSpeedPre() (string, error) {
 	// set factory mode
@@ -126,7 +126,7 @@ func (f *intelFan) setFanSpeedOne(fanID string, speedPercent int) (string, error
 //}
 type inspurFan struct{ fan }
 
-func NewInspurFan() FanContraller { return &fanContraller{fanSetter: &loopFan{&inspurFan{}}} }
+func NewInspurFan() FanContraller { return &fanContraller{FanSetter: &loopFan{&inspurFan{}}} }
 func (f *inspurFan) getFanIDs() []string {
 	return []string{"0", "2", "4", "6"}
 }
@@ -145,7 +145,7 @@ func (f *inspurFan) setFanSpeedPre() (string, error) {
 // inspur fan 2
 type inspurFan2 struct{ fan }
 
-func NewInspurFan2() FanContraller { return &fanContraller{fanSetter: &inspurFan2{}} }
+func NewInspurFan2() FanContraller { return &fanContraller{FanSetter: &inspurFan2{}} }
 func (f *inspurFan2) setFanSpeedPre() (string, error) {
 	return f.setFanCtrlMode()
 }
@@ -170,7 +170,7 @@ func (f *inspurFan2) getFanCtrlMode() (string, error) {
 // lenovo
 type lenovoFan struct{ fan }
 
-func NewLenovoFan() FanContraller                 { return &fanContraller{fanSetter: &lenovoFan{}} }
+func NewLenovoFan() FanContraller                 { return &fanContraller{FanSetter: &lenovoFan{}} }
 func (f *lenovoFan) getFanSpeedMin() int          { return 30 }
 func (f *lenovoFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("lenovo bmc not support") }
 func (f *lenovoFan) setFanSpeedPercent(speedPercent int) (string, error) {
@@ -194,7 +194,7 @@ func (f *lenovoFan) setFanSpeedPercent(speedPercent int) (string, error) {
  */
 type sugonFan struct{ fan }
 
-func NewSugonFan() FanContraller                 { return &fanContraller{fanSetter: &sugonFan{}} }
+func NewSugonFan() FanContraller                 { return &fanContraller{FanSetter: &sugonFan{}} }
 func (f *sugonFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("sugon bmc not support") }
 func (f *sugonFan) setFanSpeedPercent(speedPercent int) (string, error) {
 	return ipmitool(fmt.Sprintf("raw 0x3a 0xd 0xFF %d", speedPercent))
