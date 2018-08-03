@@ -6,39 +6,47 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-type FanSetter interface {
+var (
+	ErrCodeBug = fmt.Errorf("panic: ipmictl code bug")
+)
+
+type FanContraller interface {
+	// get fan speed in RPM
+	GetFanRPM() (string, error)
 	// get fan speed in %
 	GetFanSpeed() (string, error)
-
+	// set fan speed in %
+	SetFanSpeed(int) error
+	// set fan common
 	getFanSpeedMin() int
 	setFanSpeedPre() (string, error)
-	setFanSpeedPost() error
-
-	// all in one
+	setFanSpeedPost() (string, error)
+	// set all in one
 	setFanSpeedPercent(int) (string, error)
-	// looper
+	getFanSpeedPercent() (string, error)
+	// set looper
 	getFanIDs() []string
 	setFanSpeedOne(string, int) (string, error)
 	getFanSpeedOne(string) (string, error)
 }
 
-type FanContraller interface {
-	FanSetter
-	// get fan speed in RPM
-	GetFanRPM() (string, error)
-	// set fan speed in %
-	SetFanSpeed(int) error
-}
+type basefan struct{}
 
-type fan struct{}
+func (f *basefan) GetFanRPM() (string, error)                 { return ipmitool("sdr type Fan") }
+func (f *basefan) GetFanSpeed() (string, error)               { return "", ErrCodeBug }
+func (f *basefan) SetFanSpeed(int) error                      { return ErrCodeBug }
+func (f *basefan) getFanSpeedMin() int                        { return 20 }
+func (f *basefan) setFanSpeedPre() (string, error)            { return "", nil }
+func (f *basefan) setFanSpeedPost() (string, error)           { return "", nil }
+func (f *basefan) setFanSpeedPercent(int) (string, error)     { return "", ErrCodeBug }
+func (f *basefan) getFanSpeedPercent() (string, error)        { return "", ErrCodeBug }
+func (f *basefan) getFanIDs() []string                        { return []string{} }
+func (f *basefan) setFanSpeedOne(string, int) (string, error) { return "", ErrCodeBug }
+func (f *basefan) getFanSpeedOne(string) (string, error)      { return "", ErrCodeBug }
 
-func (f *fan) getFanSpeedMin() int                        { return 20 }
-func (f *fan) setFanSpeedPre() (string, error)            { return "", nil }
-func (f *fan) setFanSpeedPost() error                     { return nil }
-func (f *fan) getFanIDs() []string                        { return []string{} }
-func (f *fan) setFanSpeedOne(string, int) (string, error) { return "", fmt.Errorf("not support") }
-func (f *fan) getFanSpeedOne(string) (string, error)      { return "", fmt.Errorf("not support") }
-func (f *fan) setFanSpeedPercent(speedPercent int) (string, error) {
+type fanwrap struct{ FanContraller }
+
+func (f *fanwrap) setFanSpeedPercent(speedPercent int) (string, error) {
 	for _, id := range f.getFanIDs() {
 		info, err := f.setFanSpeedOne(id, speedPercent)
 		if err != nil {
@@ -48,7 +56,7 @@ func (f *fan) setFanSpeedPercent(speedPercent int) (string, error) {
 	}
 	return "", nil
 }
-func (f *fan) getFanSpeedPercent() (string, error) {
+func (f *fanwrap) getFanSpeedPercent() (string, error) {
 	ret := ""
 	for _, id := range f.getFanIDs() {
 		info, err := f.getFanSpeedOne(id)
@@ -60,42 +68,37 @@ func (f *fan) getFanSpeedPercent() (string, error) {
 	return ret, nil
 }
 
-type fanContraller struct{ FanSetter }
+type fan struct{ FanContraller }
 
-func (f *fanContraller) GetFanRPM() (string, error) {
-	return ipmitool("sdr type Fan")
-}
-func (f *fanContraller) setFanSpeedCheck(speedPercent int) error {
+func (f *fan) setFanSpeedCheck(speedPercent int) error {
 	min := f.getFanSpeedMin()
 	if speedPercent < min || speedPercent > 100 {
 		return fmt.Errorf("speed must between %d~100", min)
 	}
 	return nil
 }
-func (f *fanContraller) SetFanSpeed(speedPercent int) error {
+func (f *fan) SetFanSpeed(speedPercent int) error {
 	if err := f.setFanSpeedCheck(speedPercent); err != nil {
 		return err
 	}
-	if info, err := f.setFanSpeedPre(); err != nil {
+	if _, err := f.setFanSpeedPre(); err != nil {
 		return err
-	} else {
-		logrus.Debug(info)
 	}
 	if info, err := f.setFanSpeedPercent(speedPercent); err != nil {
 		return err
 	} else {
 		logrus.Debug(info)
 	}
-	if err := f.setFanSpeedPost(); err != nil {
+	if _, err := f.setFanSpeedPost(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // intel fan
-type intelFan struct{ fan }
+type intelFan struct{ basefan }
 
-func NewIntelFan() FanContraller                 { return &fanContraller{FanSetter: &intelFan{}} }
+func NewIntelFan() FanContraller                 { return &fan{&fanwrap{&intelFan{}}} }
 func (f *intelFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("intel bmc not support") }
 func (f *intelFan) setFanSpeedPre() (string, error) {
 	// set factory mode
@@ -109,13 +112,26 @@ func (f *intelFan) setFanSpeedOne(fanID string, speedPercent int) (string, error
 	return ipmitool(fmt.Sprintf("raw 0x30 0x15 0x05 %s 01 0x%x", fanID, speedPercent))
 }
 
+// lenovo
+type lenovoFan struct{ basefan }
+
+func NewLenovoFan() FanContraller                 { return &fan{&lenovoFan{}} }
+func (f *lenovoFan) getFanSpeedMin() int          { return 30 }
+func (f *lenovoFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("lenovo bmc not support") }
+func (f *lenovoFan) setFanSpeedPercent(speedPercent int) (string, error) {
+	xs := speedPercent * 255 / 100
+	ids := "0xFF" // all fans
+	cmd := fmt.Sprintf("raw 0x3a 0x07 %s 0x%X 0x01 0x00 0x00 0x00 0x00 0x00", ids, xs)
+	return ipmitool(cmd)
+}
+
 // inspur
 //func (f *inspurFan) getFanCtrlMode() (string, error) {
 //	return ipmitool("raw 0x3a 0x7b")
 //}
-type inspurFan struct{ fan }
+type inspurFan struct{ basefan }
 
-func NewInspurFan() FanContraller { return &fanContraller{FanSetter: &inspurFan{}} }
+func NewInspurFan() FanContraller { return &fan{&inspurFan{}} }
 func (f *inspurFan) getFanIDs() []string {
 	return []string{"0", "2", "4", "6"}
 }
@@ -132,9 +148,9 @@ func (f *inspurFan) setFanSpeedPre() (string, error) {
 }
 
 // inspur fan 2
-type inspurFan2 struct{ fan }
+type inspurFan2 struct{ basefan }
 
-func NewInspurFan2() FanContraller { return &fanContraller{FanSetter: &inspurFan2{}} }
+func NewInspurFan2() FanContraller { return &fan{&inspurFan2{}} }
 func (f *inspurFan2) setFanSpeedPre() (string, error) {
 	return f.setFanCtrlMode()
 }
@@ -156,19 +172,6 @@ func (f *inspurFan2) getFanCtrlMode() (string, error) {
 	return ipmitool("raw 0x3c 0x30")
 }
 
-// lenovo
-type lenovoFan struct{ fan }
-
-func NewLenovoFan() FanContraller                 { return &fanContraller{FanSetter: &lenovoFan{}} }
-func (f *lenovoFan) getFanSpeedMin() int          { return 30 }
-func (f *lenovoFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("lenovo bmc not support") }
-func (f *lenovoFan) setFanSpeedPercent(speedPercent int) (string, error) {
-	xs := speedPercent * 255 / 100
-	ids := "0xFF" // all fans
-	cmd := fmt.Sprintf("raw 0x3a 0x07 %s 0x%X 0x01 0x00 0x00 0x00 0x00 0x00", ids, xs)
-	return ipmitool(cmd)
-}
-
 // sugon
 /* TODO:
  *  3.4 退出风扇调速手动模式，进入自动控制模式
@@ -181,9 +184,9 @@ func (f *lenovoFan) setFanSpeedPercent(speedPercent int) (string, error) {
  * Performance Mode:
  * ipmitool -H x.x.x.x –U  admin  -P  admin  raw  0x3a   0xb   0x0  0x3
  */
-type sugonFan struct{ fan }
+type sugonFan struct{ basefan }
 
-func NewSugonFan() FanContraller                 { return &fanContraller{FanSetter: &sugonFan{}} }
+func NewSugonFan() FanContraller                 { return &fan{&sugonFan{}} }
 func (f *sugonFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("sugon bmc not support") }
 func (f *sugonFan) setFanSpeedPercent(speedPercent int) (string, error) {
 	return ipmitool(fmt.Sprintf("raw 0x3a 0xd 0xFF %d", speedPercent))
