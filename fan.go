@@ -195,11 +195,18 @@ func (f *inspurFan2) getFanCtrlMode() (string, error) {
  */
 type sugonFan struct{ basefan }
 
-func NewSugonFan() FanContraller                 { return &fan{&sugonFan{}} }
+func init() {
+	RegisterFan(27500, 514, "Sugon", "W760-G30", NewSugonFan())
+}
+
+func NewSugonFan() FanContraller { return &fan{&sugonFan{}} }
+
+func (f *sugonFan) getFanSpeedMin() int          { return 30 }
 func (f *sugonFan) GetFanSpeed() (string, error) { return "", fmt.Errorf("sugon bmc not support") }
+
 func (f *sugonFan) setFanSpeedPercent(speedPercent int) (string, error) {
-	return ipmitool(fmt.Sprintf("raw 0x3a 0xd 0xFF %d", speedPercent))
+	return ipmitool(fmt.Sprintf("raw 0x3a 0xd 0xFF 0x%x", speedPercent))
 }
 func (f *sugonFan) setFanSpeedPre() (string, error) {
-	return ipmitool("raw 0x3a 0xb 0x0 0x0")
+	return ipmitool("raw 0x3a 0xb 0x0 0x0 0")
 }
